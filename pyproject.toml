@@ -1,0 +1,17 @@
+[project]
+name = "landing-page-generator"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "crewai>=0.117.1",
+    "crewai-tools[mcp]>=0.43.0",
+    "langchain-community>=0.3.23",
+    "langchain-mcp-adapters>=0.0.9",
+    "langchain-openai>=0.2.14",
+    "langgraph>=0.3.34",
+    "mcp>=1.6.0",
+    "python-dotenv>=1.1.0",
+    "unstructured>=0.17.2",
+]
