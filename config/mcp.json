@@ -5,6 +5,11 @@
         "args": [
           "@playwright/mcp@latest"
         ]
+      },
+      "perplexity": {
+        "command": "uvx",
+        "args": ["perplexity-mcp"],
+        "transport": "stdio"
       }
     }
   
