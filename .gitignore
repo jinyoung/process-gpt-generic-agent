@@ -45,3 +45,6 @@ yarn-error.log*
 .yarn-integrity
 
 .venv 
+
+# LLM Cache
+.cache/ 

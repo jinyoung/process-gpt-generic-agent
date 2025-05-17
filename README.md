@@ -14,6 +14,50 @@ uv run python src/main.py
      uv python -m unittest
      ```
    - 기타 스크립트 실행도 `uv python [파일명.py]` 형식으로 실행하면 됩니다.
+   - LLM 캐시 관리:
+     ```bash
+     # 모든 캐시 삭제
+     uv python -m src.tools.cache_manager --clear
+     
+     # 48시간보다 오래된 캐시만 삭제
+     uv python -m src.tools.cache_manager --clear --older-than 48
+     ```
+
+# LLM 캐싱 시스템
+
+이 프로젝트는 LLM(Large Language Model) 호출 결과를 캐싱하여 성능을 개선하고 API 비용을 절감하는 기능을 제공합니다.
+
+## 주요 기능
+
+1. **디스크 기반 캐싱**: LLM 응답을 디스크에 저장하여 동일한 요청에 대해 재사용할 수 있습니다.
+2. **TTL(Time-To-Live) 관리**: 캐시 항목에 만료 시간을 설정하여 최신 정보를 유지합니다.
+3. **LangChain 통합**: LangChain의 모델에서 캐싱을 자동으로 활용합니다.
+4. **OpenAI Embedding 캐싱**: Embedding API 호출 결과를 캐싱하여 중복 호출을 방지합니다.
+
+## 캐시 관리
+
+캐시는 `.cache/llm` 디렉토리에 저장되며, 다음과 같은 방법으로 관리할 수 있습니다:
+
+```python
+# 코드에서 캐시 관리
+from src.tools.cache_manager import CacheManager
+
+# 모든 캐시 삭제
+CacheManager.clear_cache()
+
+# 24시간보다 오래된 캐시만 삭제
+CacheManager.clear_cache(older_than_hours=24)
+```
+
+또는 커맨드 라인에서:
+
+```bash
+# 모든 캐시 삭제
+python -m src.tools.cache_manager --clear
+
+# 48시간보다 오래된 캐시만 삭제
+python -m src.tools.cache_manager --clear --older-than 48
+```
 
 # TODO
 

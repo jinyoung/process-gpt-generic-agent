@@ -13,17 +13,23 @@ from crewai_tools import MCPServerAdapter
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import HumanMessage, SystemMessage
+from src.tools.knowledge_tool import KnowledgeTool
+from mem0 import MemoryClient
 
 class CrewConfigManager:
-    def __init__(self, agents_config_path: str = "config/agents.yaml", mcp_config_path: str = "config/mcp.json"):
+    def __init__(self, agents_config_path: str = "config/agents.yaml", mcp_config_path: str = "config/mcp.json", knol_task_path: str = "config/knol_task.yaml"):
         self.agents_config_path = agents_config_path
         self.mcp_config_path = mcp_config_path
+        self.knol_task_path = knol_task_path
         self.agents_config = self._load_agents_config()
         self.mcp_tools = self._load_mcp_tools()
+        #self.knol_task_config = self._load_knol_task_config()
+        self.mem0_client = MemoryClient(api_key=os.environ.get('MEM_ZERO_API_KEY'))
         self.base_tools = {
             "search_internet": SearchInternetTool(),
             "write_file": FileTools.write_file,
-            "scrape_website": ScrapeWebsiteTool()
+            "scrape_website": ScrapeWebsiteTool(),
+            "knowledge_management": KnowledgeTool()
         }
 
     def _load_agents_config(self) -> Dict:
@@ -53,6 +59,15 @@ class CrewConfigManager:
             print(f"Warning: Could not load MCP config from {self.mcp_config_path}")
             return {}
 
+    def _load_knol_task_config(self) -> Dict:
+        """Load knowledge task configuration from YAML file."""
+        try:
+            with open(self.knol_task_path, 'r') as f:
+                return yaml.safe_load(f)
+        except (FileNotFoundError, yaml.YAMLError):
+            print(f"Warning: Could not load knowledge task config from {self.knol_task_path}")
+            return {}
+
     def _get_tools_for_agent(self, agent_config: Dict) -> List:
         """Get tools list for an agent based on their configuration."""
         tools = []
@@ -68,7 +83,8 @@ class CrewConfigManager:
                     if mcp_server_name in self.mcp_tools:
                         # Add all tools from the specified MCP server
                         tools.extend(self.mcp_tools[mcp_server_name])
-        
+        # knowledge_management 툴은 항상 추가 [off]
+       # tools.append(self.base_tools["knowledge_management"])
         return tools
 
     def generate_crew_config(self, topic: str) -> Dict:
@@ -123,7 +139,7 @@ class CrewConfigManager:
             )
             agents.append(agent)
 
-        # Create tasks
+        # Create tasks with memory injection
         tasks = []
         for task_config in config["tasks"]:
             # Find the corresponding agent
@@ -134,12 +150,44 @@ class CrewConfigManager:
             if not agent:
                 raise ValueError(f"Agent not found for task: {task_config}")
             
+            # Get memory context for the agent
+            memory_context = self.mem0_client.search(
+                "search any checkpoints and output format guide for: " + task_config["description"], 
+                agent_id=agent.role
+            )
+            
+            # Inject memory into task description if available
+            task_description = task_config["description"]
+            if memory_context and len(memory_context) > 0:
+                task_description = f"{task_description}\n\nUse this guide:\n{memory_context[0]['memory']}"
+            
             task = Task(
-                description=task_config["description"],
+                description=task_description,
                 agent=agent,
                 expected_output=task_config.get("expected_output")
             )
             tasks.append(task)
+            
+        # Add knowledge management tasks with memory injection
+        # if self.knol_task_config and "task_config" in self.knol_task_config:
+        #     knol_config = self.knol_task_config["task_config"]
+            
+        #     for agent in agents:
+        #         # Get memory context for knowledge management task
+        #         knol_description = knol_config["description"].format(agent_name=agent.role)
+        #         memory_context = self.mem0_client.search(knol_description, user_id=agent.role)
+                
+        #         # Inject memory into knowledge task description if available
+        #         if memory_context and len(memory_context) > 0:
+        #             knol_description = f"Use this memory:\n{memory_context[0]['memory']}\n{knol_description}"
+                
+        #         # Create a knowledge management task for this agent
+        #         knowledge_task = Task(
+        #             description=knol_description,
+        #             agent=agent,
+        #             expected_output=knol_config["expected_output"].format(agent_name=agent.role)
+        #         )
+        #         tasks.append(knowledge_task)
 
         # Create and return the crew
         return Crew(
