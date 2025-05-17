@@ -48,3 +48,6 @@ yarn-error.log*
 
 # LLM Cache
 .cache/ 
+src/__pycache__/crew_config_manager.cpython-311.pyc
+src/tools/__pycache__/mem_zero_tool.cpython-311.pyc
+src/__pycache__/crew_config_manager.cpython-311.pyc

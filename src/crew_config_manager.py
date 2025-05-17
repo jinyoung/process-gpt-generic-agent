@@ -13,7 +13,7 @@ from crewai_tools import MCPServerAdapter
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import HumanMessage, SystemMessage
-from src.tools.knowledge_tool import KnowledgeTool
+from src.tools.mem_zero_tool import MemZeroTool
 from mem0 import MemoryClient
 
 class CrewConfigManager:
@@ -29,7 +29,8 @@ class CrewConfigManager:
             "search_internet": SearchInternetTool(),
             "write_file": FileTools.write_file,
             "scrape_website": ScrapeWebsiteTool(),
-            "knowledge_management": KnowledgeTool()
+            #"knowledge_management": KnowledgeTool()
+            "knowledge_management": MemZeroTool()
         }
 
     def _load_agents_config(self) -> Dict:
@@ -84,7 +85,7 @@ class CrewConfigManager:
                         # Add all tools from the specified MCP server
                         tools.extend(self.mcp_tools[mcp_server_name])
         # knowledge_management 툴은 항상 추가 [off]
-       # tools.append(self.base_tools["knowledge_management"])
+        tools.append(self.base_tools["knowledge_management"])
         return tools
 
     def generate_crew_config(self, topic: str) -> Dict:
