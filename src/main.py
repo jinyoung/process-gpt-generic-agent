@@ -3,7 +3,6 @@
 import os
 from crew_config_manager import CrewConfigManager
 from dotenv import load_dotenv
-import json
 
 def main():
     # Load environment variables from .env file
@@ -29,11 +28,6 @@ def main():
             agents_config_path=agents_config,
             mcp_config_path=mcp_config
         )
-
-        # Crew 구성 정보 JSON 출력
-        crew_config = manager.generate_crew_config(goal)
-        print("\n🧑‍💻 AI 크루 구성 결과 (JSON):")
-        print(json.dumps(crew_config, ensure_ascii=False, indent=2))
 
         # Create and run the crew
         print(f"\n🎯 입력된 목표: {goal}")

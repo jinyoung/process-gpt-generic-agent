@@ -4,7 +4,7 @@ import os
 from typing import Dict, List, Optional
 from pathlib import Path
 import openai
-from crewai import Agent, Task, Crew
+from crewai import Agent, Task, Crew, Process
 from src.tools.search_tools import SearchInternetTool
 from src.tools.file_tools import FileTools
 from src.tools.browser_tools import ScrapeWebsiteTool
@@ -88,113 +88,47 @@ class CrewConfigManager:
         tools.append(self.base_tools["knowledge_management"])
         return tools
 
-    def generate_crew_config(self, topic: str) -> Dict:
-        """Generate crew configuration for a given topic using Langchain."""
-        # Create chat model
-        chat = ChatOpenAI(
-            model="gpt-4",
-            temperature=0.7
-        )
-        
-        # Create prompt template
-        prompt = self._create_prompt(topic)
-        
-        # Create messages
-        messages = [
-            SystemMessage(content=prompt)
-        ]
-        
-        # Get response
-        response = chat.invoke(messages)
-        
-        # Parse the response
-        try:
-            config = json.loads(response.content)
-            return config
-        except json.JSONDecodeError:
-            raise ValueError("Failed to parse LLM response as JSON")
-
     def create_crew(self, topic: str) -> Crew:
-        """Create a Crew instance based on the topic."""
-        config = self.generate_crew_config(topic)
-        
-        # Create agents
+        """Create a Crew instance based on the topic using CrewAI's built-in planning."""
+        # Create agents from configuration
         agents = []
-        for agent_config in config["agents"]:
-            agent_name = agent_config["name"]
-            if agent_name not in self.agents_config:
-                raise ValueError(f"Agent {agent_name} not found in configuration")
-            
-            agent_base_config = self.agents_config[agent_name]
+        for agent_name, agent_config in self.agents_config.items():
             # Get tools for this agent
-            tools = self._get_tools_for_agent(agent_base_config)
+            tools = self._get_tools_for_agent(agent_config)
             
-            # Agent의 role은 agent_name, goal은 agent_config["goal"] (없으면 base_config의 goal)
+            # Create agent
             agent = Agent(
                 role=agent_name,
-                goal=agent_config.get("goal", agent_base_config["goal"]),
-                backstory=agent_base_config["backstory"],
+                goal=agent_config["goal"],
+                backstory=agent_config["backstory"],
+                allow_delegation=True,
                 tools=tools,
-                **{k: v for k, v in agent_base_config.items() 
+                **{k: v for k, v in agent_config.items() 
                    if k not in ["role", "goal", "backstory", "tools"]}
             )
             agents.append(agent)
 
-        # Create tasks with memory injection
-        tasks = []
-        for task_config in config["tasks"]:
-            # Find the corresponding agent
-            agent = next(
-                (a for a in agents if a.role == task_config["agent"]),
-                None
-            )
-            if not agent:
-                raise ValueError(f"Agent not found for task: {task_config}")
-            
-            # Get memory context for the agent
-            memory_context = self.mem0_client.search(
-                "search any checkpoints and output format guide for: " + task_config["description"], 
-                agent_id=agent.role
-            )
-            
-            # Inject memory into task description if available
-            task_description = task_config["description"]
-            if memory_context and len(memory_context) > 0:
-                task_description = f"{task_description}\n\nUse this guide:\n{memory_context[0]['memory']}"
-            
-            task = Task(
-                description=task_description,
-                agent=agent,
-                expected_output=task_config.get("expected_output")
-            )
-            tasks.append(task)
-            
-        # Add knowledge management tasks with memory injection
-        # if self.knol_task_config and "task_config" in self.knol_task_config:
-        #     knol_config = self.knol_task_config["task_config"]
-            
-        #     for agent in agents:
-        #         # Get memory context for knowledge management task
-        #         knol_description = knol_config["description"].format(agent_name=agent.role)
-        #         memory_context = self.mem0_client.search(knol_description, user_id=agent.role)
-                
-        #         # Inject memory into knowledge task description if available
-        #         if memory_context and len(memory_context) > 0:
-        #             knol_description = f"Use this memory:\n{memory_context[0]['memory']}\n{knol_description}"
-                
-        #         # Create a knowledge management task for this agent
-        #         knowledge_task = Task(
-        #             description=knol_description,
-        #             agent=agent,
-        #             expected_output=knol_config["expected_output"].format(agent_name=agent.role)
-        #         )
-        #         tasks.append(knowledge_task)
+        # Create initial task
+        initial_task = Task(
+            description=f"주어진 목표를 달성하기 위한 계획을 수립하고 실행하세요: {topic}",
+            agent=agents[0],  # First agent will be the initial planner
+            expected_output="목표 달성을 위한 상세 실행 계획과 각 에이전트의 역할이 포함된 문서"
+        )
 
-        # Create and return the crew
+        # Create LLM for the manager
+        llm = ChatOpenAI(
+            model="gpt-4.1",
+            temperature=0.7
+        )
+
+        # Create and return the crew with hierarchical planning
         return Crew(
             agents=agents,
-            tasks=tasks,
-            verbose=True
+            tasks=[initial_task],
+            manager_llm=llm,
+            process=Process.hierarchical,
+            verbose=True,
+            planning=True
         )
 
     def _create_prompt(self, topic: str) -> str:
