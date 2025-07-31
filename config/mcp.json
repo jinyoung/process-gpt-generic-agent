@@ -15,20 +15,6 @@
         "type": "url",
         "url": "https://mcp-server-c8d37572-2872-4ad3-a54c-c42d54c8a799.supermachine.app",
         "transport": "sse"
-      },
-      "odoo": {
-        "command": "/opt/anaconda3/bin/python3",
-        "args": [
-          "-m",
-          "odoo_mcp"
-        ],
-        "env": {
-          "ODOO_URL": "https://uengine.odoo.com",
-          "ODOO_DB": "uengine",
-          "ODOO_USERNAME": "jyjang@uengine.org",
-          "ODOO_PASSWORD": "bca96d3d9716c1dddef9c159097aca3cb2b16352"
-        },
-        "transport": "stdio"
       }
     }
   

@@ -121,45 +121,12 @@ class CrewConfigManager:
             temperature=0.7
         )
 
-        # Create and return the crew with hierarchical planning
+        # Create and return the crew with planning
         return Crew(
             agents=agents,
             tasks=[initial_task],
             manager_llm=llm,
-            process=Process.hierarchical,
+            process=Process.sequential,
             verbose=True,
             planning=True
         )
-
-    def _create_prompt(self, topic: str) -> str:
-        """Create the prompt for OpenAI with available agents."""
-        agent_names = list(self.agents_config.keys())
-        
-        prompt = f"""You are a tool for creating configurations for an Agent framework called CrewAI.
-
-        To achieve a certain Goal, multiple Agents will collaborate to solve problems. Therefore, divide the necessary expertise areas to solve the problem with at least two or more Agent if possible.
-        It mainly consists of the configuration of Agents and the Tasks each Agent performs. And divide the Tasks so that each Agent can deal with problems in their expertise area by passing work among themselves.
-        Since the Tasks will be executed sequentially, they must be defined in order.
-        the result MUST be written in Korean language.
-        All results must be generated in JSON format with key values(as valid JSON using double quotes around keys and values).
-
-        we have following agents: {agent_names}
-
-        The resulting json will be as follows (Please use VALID JSON with double-quoted for key and value):
-        {{
-            "agents":[{{
-                "name": "name of the agent (one of the listed agent)",
-                "goal": "goal of the agent (optional, will use default if not provided)"
-            }}],
-            "tasks":[
-                {{
-                "description": "Task description in Korean",
-                "agent": "agent assigned to the task (e.g., agent)",
-                "expected_output": "expected output of the task"
-                }}
-            ]
-        }}
-
-        Please configure a crew for the following mission: {topic}
-        """
-        return prompt 
