@@ -51,7 +51,7 @@ senior_proposal_expert:
     "고객의 니즈를 정확히 파악하고 설득력 있는 제안서를 작성하여 프로젝트의 성공적인 수주를 지원합니다."
   backstory: >
     "수많은 성공적인 제안서 작성 경험을 보유하고 있으며, 복잡한 아이디어를 명확하고 매력적인 제안서로 변환하는 능력이 탁월합니다."
-  tools: perplexity(mcp)  
+  tools: perplexity(mcp), gitHub(mcp)  
 
 technical_writer:
   role: >
